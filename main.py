@@ -1,9 +1,10 @@
 import discord
 import google.generativeai as genai
-import os
+import os  # Thêm dòng này để đọc được biến môi trường
 
-# --- CẤU HÌNH ---
-TOKEN = 'MTQ4OTA5MzYyMjk0NjMzNjg2MA.GYlGYf.6vJchzqboWGVC4VWXuEEU28o32bYko5XGOvJ6c'
+# --- CẤU HÌNH BẢO MẬT ---
+# Thay vì dán mã trực tiếp, ta dùng lệnh này để lấy từ Render
+TOKEN = os.getenv('DISCORD_TOKEN') 
 GEMINI_KEY = 'AIzaSyDM2Y5SH-n1v8NNWJbdvBMqQ5_bkhNlpSk'
 
 # Thiết lập Gemini
@@ -20,15 +21,12 @@ async def on_ready():
 
 @client.event
 async def on_message(msg):
-    # Không trả lời tin nhắn của chính mình
     if msg.author == client.user:
         return
     
-    # Chỉ trả lời khi trong tin nhắn có chữ 'nini'
     if 'nini' in msg.content.lower():
         async with msg.channel.typing():
             try:
-                # Prompt để Nini nhận diện Nhím
                 prompt = f"Bạn là Nini, một cô gái đáng yêu, thân thiện. Bạn đang trò chuyện với Nhím. Hãy trả lời Nhím thật ngọt ngào: {msg.content}"
                 response = model.generate_content(prompt)
                 await msg.reply(response.text)
@@ -37,4 +35,3 @@ async def on_message(msg):
                 await msg.reply("Nini hơi chóng mặt, Nhím nói lại được không?")
 
 client.run(TOKEN)
-
