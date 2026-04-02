@@ -1,23 +1,37 @@
 import discord
 import google.generativeai as genai
-import os  # Thêm dòng này để đọc được biến môi trường
+import os
+import asyncio
+from flask import Flask
+import threading
 
-# --- CẤU HÌNH BẢO MẬT ---
-# Thay vì dán mã trực tiếp, ta dùng lệnh này để lấy từ Render
-TOKEN = os.getenv('DISCORD_TOKEN') 
+# --- PHẦN GIỮ BOT ONLINE TRÊN RENDER ---
+app = Flask('')
+@app.route('/')
+def home():
+    return "Nini is alive!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = threading.Thread(target=run)
+    t.start()
+
+# --- CẤU HÌNH BOT AI ---
+TOKEN = os.getenv('DISCORD_TOKEN')
 GEMINI_KEY = 'AIzaSyDM2Y5SH-n1v8NNWJbdvBMqQ5_bkhNlpSk'
 
-# Thiết lập Gemini
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# Thiết lập Discord
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    print(f'--- NINI ĐÃ ONLINE TRÊN RENDER! ---')
+    print(f'--- NINI DA ONLINE TREN RENDER! ---')
+    await client.change_presence(activity=discord.Game(name="Minecraft với Nhím ✨"))
 
 @client.event
 async def on_message(msg):
@@ -31,7 +45,13 @@ async def on_message(msg):
                 response = model.generate_content(prompt)
                 await msg.reply(response.text)
             except Exception as e:
-                print(f"Lỗi rồi Nhím ơi: {e}")
-                await msg.reply("Nini hơi chóng mặt, Nhím nói lại được không?")
+                print(f"Loi: {e}")
+                await msg.reply("Nini hơi chóng mặt, Nhím nói lại được không? ✨")
 
-client.run(TOKEN)
+# --- KICH HOAT ---
+if __name__ == "__main__":
+    keep_alive() # Bước quan trọng nhất để Render không tắt Bot
+    try:
+        client.run(TOKEN)
+    except Exception as e:
+        print(f"Loi dang nhap: {e}")
