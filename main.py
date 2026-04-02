@@ -4,7 +4,7 @@ import os
 from flask import Flask
 import threading
 
-# --- GIỮ BOT ONLINE ---
+# --- GIỮ BOT ONLINE TRÊN RENDER ---
 app = Flask('')
 @app.route('/')
 def home():
@@ -19,7 +19,8 @@ def keep_alive():
 
 # --- CẤU HÌNH ---
 TOKEN = os.getenv('DISCORD_TOKEN')
-GEMINI_KEY = 'AIzaSyDM2Y5SH-n1v8NNWJbdvBMqQ5_bkhNlpSk'
+# Nhím nhớ thay API Key mới vào đây nhé!
+GEMINI_KEY = 'AIzaSy_THAY_KEY_MOI_CUA_NHIM_VAO_DAY' 
 
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
@@ -29,37 +30,32 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    print(f'--- NINI DA ONLINE! ---')
+    print(f'--- NINI DA ONLINE KHONG LAP TIN NHAN! ---')
 
 @client.event
 async def on_message(msg):
-    # 1. QUAN TRỌNG: Nếu là tin nhắn của chính Bot thì BỎ QUA luôn (chống lặp)
+    # 1. BƯỚC QUAN TRỌNG NHẤT: Nếu là chính Nini nói thì im lặng, không trả lời nữa
     if msg.author == client.user:
         return
     
-    # 2. Chỉ trả lời khi được nhắc tên "nini"
+    # 2. Kiểm tra nếu Nhím có gọi tên "nini"
     if 'nini' in msg.content.lower():
         async with msg.channel.typing():
             try:
-                # Gửi nội dung cho Gemini xử lý
-                prompt = f"Bạn là Nini, một cô gái đáng yêu, thân thiện. Hãy trò chuyện với Nhím thật ngọt ngào và ngắn gọn: {msg.content}"
+                # Gửi câu hỏi của Nhím cho Gemini
+                prompt = f"Bạn là Nini, một cô gái đáng yêu. Hãy trả lời Nhím thật ngắn gọn và ngọt ngào: {msg.content}"
                 response = model.generate_content(prompt)
                 
-                # Kiểm tra nếu AI có nội dung trả về
-                if response.text:
-                    await msg.reply(response.text)
-                else:
-                    await msg.reply("Nini đang suy nghĩ một chút, Nhím đợi em tí nha~")
+                # Trả lời Nhím
+                await msg.reply(response.text)
                     
             except Exception as e:
-                print(f"Lỗi AI: {e}")
-                # Nếu lỗi "Chóng mặt", Nhím nên kiểm tra lại GEMINI_KEY
-                await msg.reply("Hic, Nini hơi mệt, Nhím đợi em nghỉ ngơi xíu nhé! ✨")
+                print(f"Loi: {e}")
+                await msg.reply("Nini hơi chóng mặt, Nhím thay API Key mới cho em chưa? ✨")
 
 if __name__ == "__main__":
     keep_alive() 
     try:
         client.run(TOKEN)
     except Exception as e:
-        print(f"Lỗi kết nối: {e}")
-                
+        print(f"Loi: {e}")
