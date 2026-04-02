@@ -19,8 +19,8 @@ def keep_alive():
 
 # --- CẤU HÌNH ---
 TOKEN = os.getenv('DISCORD_TOKEN')
-# Nhím nhớ thay API Key mới vào đây nhé!
-GEMINI_KEY = 'AIzaSy_THAY_KEY_MOI_CUA_NHIM_VAO_DAY' 
+# Tui đã dán API Key mới của Nhím vào đây rồi nè!
+GEMINI_KEY = 'AIzaSyAS4vixpBT1L_ACaBRJN7ugpcFvaunIQ3M'
 
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
@@ -30,32 +30,35 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    print(f'--- NINI DA ONLINE KHONG LAP TIN NHAN! ---')
+    print(f'--- NINI DA CO NAO VA ONLINE! ---')
+    await client.change_presence(activity=discord.Game(name="Minecraft với Nhím ✨"))
 
 @client.event
 async def on_message(msg):
-    # 1. BƯỚC QUAN TRỌNG NHẤT: Nếu là chính Nini nói thì im lặng, không trả lời nữa
+    # 1. CHỐNG LẶP: Nếu là Bot nói thì bỏ qua
     if msg.author == client.user:
         return
     
-    # 2. Kiểm tra nếu Nhím có gọi tên "nini"
+    # 2. CHỈ TRẢ LỜI KHI GỌI TÊN: "nini"
     if 'nini' in msg.content.lower():
         async with msg.channel.typing():
             try:
-                # Gửi câu hỏi của Nhím cho Gemini
-                prompt = f"Bạn là Nini, một cô gái đáng yêu. Hãy trả lời Nhím thật ngắn gọn và ngọt ngào: {msg.content}"
+                # Prompt để Nini trả lời thông minh hơn
+                prompt = f"Bạn là Nini, một cô gái đáng yêu và thông minh. Hãy trò chuyện ngắn gọn với Nhím: {msg.content}"
                 response = model.generate_content(prompt)
                 
-                # Trả lời Nhím
-                await msg.reply(response.text)
+                if response.text:
+                    await msg.reply(response.text)
+                else:
+                    await msg.reply("Nini đang nghĩ, Nhím đợi em tí nha~")
                     
             except Exception as e:
-                print(f"Loi: {e}")
-                await msg.reply("Nini hơi chóng mặt, Nhím thay API Key mới cho em chưa? ✨")
+                print(f"Lỗi AI: {e}")
+                await msg.reply("Hic, Nini hơi mệt, Nhím thử lại sau 1 phút nhé! ✨")
 
 if __name__ == "__main__":
     keep_alive() 
     try:
         client.run(TOKEN)
     except Exception as e:
-        print(f"Loi: {e}")
+        print(f"Loi ket noi: {e}")
