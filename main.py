@@ -2,29 +2,42 @@ import discord
 import os
 import datetime
 from discord.ext import tasks
+from flask import Flask
+from threading import Thread
 
-# --- CẤU HÌNH BẢO MẬT ---
+# --- 1. ĐOẠN CODE "LỪA" RENDER (GIỮ CHO NINI KHÔNG BỊ TIMED OUT) ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Nini dang thuc de doi Bo Nhim ne!"
+
+def run():
+    # Render se cap PORT tu dong, phai co cai nay moi chay duoc ban Free
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+# --- 2. CẤU HÌNH BOT NINI ---
 TOKEN = os.getenv('DISCORD_TOKEN') 
-# Bố nhớ thay ID_KENH_CHAT bằng ID cái phòng chat của bố nhé!
-ID_KENH_CHAT = 123456789012345678 
-ID_CUA_BO = 1048254591227134055   # <<< ID CỦA BỐ NHÍM ĐÃ ĐƯỢC GẮN XỊN XÒ
+ID_KENH_CHAT = 123456789012345678 # BỐ NHỚ THAY ID PHÒNG CHAT VÀO ĐÂY NHÉ!
+ID_CUA_BO = 1048254591227134055   
 
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
-# --- LỊCH TRÌNH CỦA CON GÁI NINI (Giờ Việt Nam) ---
 @tasks.loop(minutes=1)
 async def nini_nhac_nho():
-    # Lấy giờ Việt Nam UTC+7
     bay_gio = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7)))
     gio = bay_gio.hour
     phut = bay_gio.minute
 
     channel = client.get_channel(ID_KENH_CHAT)
-    if not channel: 
-        return
+    if not channel: return
 
-    # Nini chỉ nhắn vào đúng phút 00 để không bị spam
     if phut == 0:
         if gio == 6:
             await channel.send("Bố Nhím ơi, 6h sáng rồi! Bố dậy đi thôi, con dậy từ sớm đợi bố nè! ☀️")
@@ -43,17 +56,11 @@ async def on_ready():
 
 @client.event
 async def on_message(msg):
-    # 1. Không tự trả lời chính mình
-    if msg.author == client.user:
-        return
-    
-    # 2. KHÓA BẢO VỆ: Chỉ trả lời nếu người nhắn là Bố Nhím
-    if msg.author.id != ID_CUA_BO:
+    # CHỐNG XUNG ĐỘT: Bỏ qua nếu là Bot hoặc không phải Bố Nhím
+    if msg.author.bot or msg.author.id != ID_CUA_BO:
         return 
 
-    # 3. Nếu đúng là Bố Nhím nói, con gái mới trả lời
     noi_dung = msg.content.lower()
-    
     if 'nini' in noi_dung:
         if 'ngủ ngon' in noi_dung:
             await msg.reply("Dạ, bố Nhím ngủ ngon ạ! Con yêu bố nhiều lắm! ❤️")
@@ -64,4 +71,8 @@ async def on_message(msg):
         else:
             await msg.reply("Dạ, con đây bố Nhím ơi! Bố gọi con có chi hông?")
 
-client.run(TOKEN)
+# --- 3. KÍCH HOẠT ---
+if __name__ == "__main__":
+    keep_alive() # Gọi Nini thức dậy trước
+    client.run(TOKEN) # Sau đó mới kết nối Discord
+    
