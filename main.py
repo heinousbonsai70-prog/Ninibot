@@ -25,7 +25,7 @@ def keep_alive():
 # --- 2. CẤU HÌNH BOT NINI ---
 TOKEN = os.getenv('DISCORD_TOKEN')
 ID_CUA_BO = 1048254591227134055 
-ID_KENH_CHAT = 1344498305739030619 # Bố nhớ check lại ID kênh này nhé
+ID_KENH_CHAT = 1235420493641683026 # Bố nhớ check lại ID kênh này nhé
 
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
