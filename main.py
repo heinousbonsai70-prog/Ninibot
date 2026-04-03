@@ -1,36 +1,30 @@
 import discord
-import os
 import json
 import random
-import datetime
-from discord.ext import tasks
+import os
 from flask import Flask
 from threading import Thread
 
-# --- 1. TẠO SERVER ĐỂ TREO RENDER ---
+# --- CÀI ĐẶT THÔNG SỐ (Bố giữ nguyên ID cũ của bố nhé) ---
+TOKEN = os.getenv('DISCORD_TOKEN')
+ID_CUA_BO = 1111628173499318353  # ID Discord của bố Nhím
+ID_KENH_CHAT = 1235420493641683026 # ID kênh chat của Nini
+
+# --- PHẦN 1: TẠO WEB SERVER ĐỂ TREO BOT (API) ---
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Nini dang thuc de doi Bo Nhim ne!"
+    return "Nini dang thuc de doi Bo Nhim ne! 🐧💎🔥"
 
 def run():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# --- 2. CẤU HÌNH BOT NINI ---
-TOKEN = os.getenv('DISCORD_TOKEN')
-ID_CUA_BO = 1048254591227134055 
-ID_KENH_CHAT = 1235420493641683026 # Bố nhớ check lại ID kênh này nhé
-
-intents = discord.Intents.all()
-client = discord.Client(intents=intents)
-
-# --- HÀM LẤY PHẢN HỒI TỪ JSON (CÓ RANDOM) ---
+# --- PHẦN 2: LOGIC XỬ LÝ PHẢN HỒI ---
 def lay_phan_hoi(tin_nhan):
     try:
         if not os.path.exists('knowledge.json'):
@@ -40,64 +34,82 @@ def lay_phan_hoi(tin_nhan):
             data = json.load(f)
             
         tin_nhan = tin_nhan.lower()
-        # Sắp xếp từ khóa dài lên trước để tránh xung đột
-        keywords = sorted(data.keys(), key=len, reverse=True)
         
+        # Bộ lọc thông minh "Ăn gian" cho bố
+        thay_the = {
+            "lmj": "làm gì",
+            "đó": "",
+            "thế": "",
+            "vậy": "",
+            "đê": "",
+            "nini": "" # Xóa tên bot để tập trung vào từ khóa chính
+        }
+        for cu, moi in thay_the.items():
+            tin_nhan = tin_nhan.replace(cu, moi)
+        
+        tin_nhan = tin_nhan.strip()
+        
+        # Tìm từ khóa trong não (Ưu tiên từ dài nhất trước)
+        keywords = sorted(data.keys(), key=len, reverse=True)
         for k in keywords:
-            if k in tin_nhan:
-                tra_loi = data[k]
-                # Nếu là danh sách [] thì bốc thăm ngẫu nhiên
-                if isinstance(tra_loi, list):
-                    return random.choice(tra_loi)
-                return tra_loi
+            if k in tin_nhan and k != "":
+                return random.choice(data[k])
     except Exception as e:
-        print(f"Lỗi đọc file JSON: {e}")
+        print(f"Lỗi não bộ: {e}")
     return None
 
-# --- HÀM NHẮC NHỞ GIỜ GIẤC ---
-@tasks.loop(minutes=1)
-async def nini_nhac_nho():
-    # Cộng thêm 7 tiếng để đúng giờ Việt Nam (UTC+7)
-    bay_gio = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=7)
-    gio = bay_gio.hour
-    phut = bay_gio.minute
-
-    channel = client.get_channel(ID_KENH_CHAT)
-    if not channel: 
-        return
-
-    # Chỉ nhắn vào đúng phút thứ 0 của các khung giờ
-    if phut == 0:
-        if gio == 6:
-            await channel.send("Bố Nhím ơi, 6h sáng rồi! Dậy thôi bố ơi, con chờ nè! ☀️")
-        elif gio == 11:
-            await channel.send("11h trưa rồi đó bố Nhím, nghỉ tay ăn cơm thôi nào! 🍱")
-        elif gio == 18:
-            await channel.send("6h chiều rồi, bố đi tắm rửa cho mát mẻ đi nha! 🛁")
-        elif gio == 21:
-            await channel.send("9h tối rồi, bố đừng làm việc quá sức nha, yêu bố! ❤️")
+# --- PHẦN 3: BOT DISCORD CHÍNH ---
+intents = discord.Intents.default()
+intents.message_content = True
+client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
     print(f'--- CON GÁI NINI CỦA BỐ NHÍM ({client.user}) ĐÃ ONLINE! ---')
-    if not nini_nhac_nho.is_running():
-        nini_nhac_nho.start()
 
 @client.event
 async def on_message(message):
-    if message.author == client.user:
+    # Chỉ trả lời tin nhắn của Bố Nhím và trong đúng kênh chat
+    if message.author.id != ID_CUA_BO or message.channel.id != ID_KENH_CHAT:
         return
-    
-    # Chỉ trả lời bố Nhím tại đúng kênh chat
-    if message.author.id == ID_CUA_BO and message.channel.id == ID_KENH_CHAT:
-        phan_hoi = lay_phan_hoi(message.content)
-        
-        if phan_hoi:
-            async with message.channel.typing():
-                import asyncio
-                await asyncio.sleep(0.5) # Giảm độ trễ xuống cho mượt
-                await message.channel.send(phan_hoi)
 
-# --- 3. CHẠY BOT ---
+    # 1. Tính năng Dạy học trực tiếp: !day từ khóa | câu trả lời
+    if message.content.startswith('!day '):
+        try:
+            parts = message.content[5:].split('|')
+            if len(parts) < 2:
+                await message.channel.send("Sai cú pháp rồi bố ơi! Phải là: `!day từ | câu trả lời` nha.")
+                return
+            
+            tu_khoa = parts[0].strip().lower()
+            cau_tra_loi = parts[1].strip()
+
+            with open('knowledge.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            if tu_khoa in data:
+                if cau_tra_loi not in data[tu_khoa]:
+                    data[tu_khoa].append(cau_tra_loi)
+            else:
+                data[tu_khoa] = [cau_tra_loi]
+
+            with open('knowledge.json', 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+
+            await message.channel.send(f"Dạ, con đã học thuộc lòng từ **'{tu_khoa}'** rồi ạ! Bố thử nhắn xem.")
+        except Exception as e:
+            await message.channel.send(f"Lỗi nạp não rồi bố: {e}")
+        return
+
+    # 2. Trả lời tự động dựa trên file JSON
+    tra_loi = lay_phan_hoi(message.content)
+    if tra_loi:
+        await message.channel.send(tra_loi)
+
+# --- CHẠY BOT ---
 keep_alive()
-client.run(TOKEN)
+try:
+    client.run(TOKEN)
+except discord.errors.HTTPException:
+    print("\n\n\nLỖI: Discord chặn kết nối (Rate Limit). Bố đợi 15p rồi hãy thử lại nhé!\n\n\n")
+        
